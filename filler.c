@@ -27,6 +27,24 @@ void    free_piece(t_filler **filler)
     free((*filler)->piece);
 }
 
+void free_filler(t_filler **filler)
+{
+    int i;
+
+    i = 0;
+    if (filler && *filler)
+    {
+        if ((*filler)->piece)
+            free_piece(filler);
+        while ((*filler)->plateau[i])
+        {
+            free((*filler)->plateau[i]);
+            i++;
+        }
+        free((*filler));
+    }
+}
+
 void    read_piece(t_filler **filler, int fd, char *line)
 {
     int width;
@@ -45,13 +63,14 @@ void    read_piece(t_filler **filler, int fd, char *line)
         (*filler)->piece[i] = ft_strdup(line);
         i++;
     }
+    free(line);
 }
 
 void    search_up_low(t_filler **filler, char *line)
 {
     (*filler)->up = (ft_strchr(&(line[4]), 'X') != NULL ? 'X' : 0);
     if (!(*filler)->up)
-        (*filler)->up = (ft_strchr(&(line[4]) , 'O') != NULL ? 'O' : 0);
+        (*filler)->up = (ft_strchr(&(line[4]) , 'O') != NULL ? 'O' : '\0');
     if ((*filler)->up && !(*filler)->low)
         (*filler)->low = (*filler)->up == 'O' ? 'X' : 'O';
 }
@@ -64,7 +83,7 @@ void    init(t_filler **filler, char *line, int fd)
     {
         (*filler)->plateau_width = ft_atoi(&(line[7]));
         (*filler)->plateau_length = ft_atoi((ft_strchr(&line[8], ' ')));
-        (*filler)->plateau = (char **) malloc(sizeof(char *) * (*filler)->plateau_width + 1);
+        (*filler)->plateau = (char **) malloc(sizeof(char *) * ((*filler)->plateau_width + 1));
         (*filler)->plateau[(*filler)->plateau_width] = NULL;
     }
     get_next_line(fd, &line);
@@ -72,7 +91,7 @@ void    init(t_filler **filler, char *line, int fd)
     while (i < (*filler)->plateau_width)
     {
         get_next_line(fd, &line);
-        if ((*filler)->up == 0)
+        if ((*filler)->up != 'X' && (*filler)->up != 'O')
             search_up_low(filler, line);
         if ((*filler)->init == 1)
             free((*filler)->plateau[i]);
@@ -85,15 +104,9 @@ void    init(t_filler **filler, char *line, int fd)
 
 void    output_coord(int i, int j)
 {
-    char *num;
-
-    num = ft_itoa(i);
-    ft_putstr(num);
-    free(num);
+    ft_putnbr(i);
     write(1, " ", 1);
-    num = ft_itoa(j);
-    ft_putstr(num);
-    free(num);
+    ft_putnbr(j);
     write(1, "\n", 1);
 }
 
@@ -147,16 +160,16 @@ int     check_valid_length(t_filler **filler, int i, int j, int width)
         j1 = 0;
         while (j1 < length)
         {
-            if ((*filler)->piece[i1][j1] == '*' && (*filler)->plateau[i][j] == (*filler)->enemy_id)
+            if ((*filler)->piece[i1][j1] == '*' && ((*filler)->plateau[i][j] == (*filler)->enemy_id || (*filler)->plateau[i][j] == ((*filler)->enemy_id + 32)))
                 return 0;
-            if ((*filler)->piece[i1][j1] == '*' && (*filler)->plateau[i][j] == (*filler)->id)
+            if ((*filler)->piece[i1][j1] == '*' && ((*filler)->plateau[i][j] == (*filler)->id || (*filler)->plateau[i][j] == (*filler)->id + 32))
                 ok++;
             inc(&j1, &j);
         }
         j = j_copy;
         inc(&i, &i1);
     }
-    if (ok != 0 && ok != num_of_star((*filler)->piece))
+    if (ok != 0 && num_of_star((*filler)->piece) > ok)
         return 1;
     return 0;
 }
@@ -188,45 +201,48 @@ int     move(t_filler **filler)
 {
     int i;
     int width;
+    int valid;
 
     width = 0;
     if ((*filler)->up == (*filler)->id)
     {
         i = (*filler)->plateau_width - 1;
-        while (!ft_strchr((*filler)->plateau[i], (*filler)->id))
+        while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
             i--;
-        while (i != -1 && !check_valid_width(filler, i))
+        while (i != -1 && (valid = check_valid_width(filler, i)) == 0)
             i--;
-        return (i == -1 ? 0 : 1);
+        return (valid == 0 ? 0 : 1);
     }
     else
     {
         i = 0;
         while ((*filler)->piece[width] != NULL)
             width++;
-        while (!ft_strchr((*filler)->plateau[i], (*filler)->id))
+        while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
             i++;
         width = (*filler)->plateau_width - width;
-        while (i <= width && !check_valid_width(filler, i))
+        while (i <= width && (valid = check_valid_width(filler, i)) == 0)
             i++;
-        return (i > width ? 0 : 1);
+        return (valid == 0 ? 0 : 1);
     }
 }
 
-void    read_plateau(t_filler **filler, int fd)
+int    read_plateau(t_filler **filler, int fd)
 {
     char *line;
-    while (get_next_line(fd, &line) >= 0)
+
+    while (get_next_line(fd, &line) > 0)
     {
         if (!ft_strncmp(line, "Plateau ", 8))
             init(filler, line, fd);
         if (!ft_strncmp(line, "Piece ", 6))
         {
             read_piece(filler, fd, line);
-            move(filler);
-            break;
+            return (move(filler));
         }
+        free(line);
     }
+    return 0;
 }
 
 int     main(void)
@@ -235,12 +251,12 @@ int     main(void)
     char *line;
     int fd;
 
-    filler = (t_filler *)malloc(sizeof(*filler));
+    filler = (t_filler *)malloc(sizeof(t_filler));
     filler->up = 0;
     filler->low = 0;
-    filler->piece = 0;
-    //fd = open("file.txt", O_RDONLY);
-    fd = 1;
+    filler->piece = NULL;
+    fd = open("file.txt", O_RDONLY);
+    //fd = 0;
     filler->init = 0;
     line = NULL;
     if (get_next_line(fd, &line) < 0 || !line || ft_strncmp(line, "$$$ exec p", 10) || (line[10] != '1' && line[10] != '2'))
@@ -248,10 +264,13 @@ int     main(void)
     filler->id = line[10] == '1' ? 'O' : 'X';
     filler->enemy_id = filler->id == 'X' ? 'O' : 'X';
     free(line);
-    read_plateau(&filler, fd);
+    while (1)
+    {
+            if (read_plateau(&filler, fd) == 0) {
+                ft_putstr("0 0\n");
+                break;
+            }
+    }
+    free_filler(&filler);
+    return (0);
 }
-
-//$$$ exec p1 : [user1]
-//$$$ exec p2 : [user2]
-//Plateau 14 30:
-//Piece 3 6:
