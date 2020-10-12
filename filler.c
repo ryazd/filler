@@ -14,9 +14,9 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-void    free_piece(t_filler **filler)
+void			free_piece(t_filler **filler)
 {
-    int i;
+    int			i;
 
     i = 0;
     while ((*filler)->piece[i])
@@ -27,9 +27,9 @@ void    free_piece(t_filler **filler)
     free((*filler)->piece);
 }
 
-void free_filler(t_filler **filler)
+void			free_filler(t_filler **filler)
 {
-    int i;
+    int			i;
 
     i = 0;
     if (filler && *filler)
@@ -41,14 +41,15 @@ void free_filler(t_filler **filler)
             free((*filler)->plateau[i]);
             i++;
         }
+        free((*filler)->plateau);
         free((*filler));
     }
 }
 
-void    read_piece(t_filler **filler, int fd, char *line)
+void			read_piece(t_filler **filler, int fd, char *line)
 {
-    int width;
-    int i;
+    int			width;
+    int			i;
 
     i = 0;
     if ((*filler)->piece)
@@ -66,7 +67,7 @@ void    read_piece(t_filler **filler, int fd, char *line)
     free(line);
 }
 
-void    search_up_low(t_filler **filler, char *line)
+void			search_up_low(t_filler **filler, char *line)
 {
     (*filler)->up = (ft_strchr(&(line[4]), 'X') != NULL ? 'X' : 0);
     if (!(*filler)->up)
@@ -75,9 +76,10 @@ void    search_up_low(t_filler **filler, char *line)
         (*filler)->low = (*filler)->up == 'O' ? 'X' : 'O';
 }
 
-void    init(t_filler **filler, char *line, int fd)
+void			init(t_filler **filler, char *line, int fd)
 {
-    int i;
+    int			i;
+
     i = 0;
     if ((*filler)->init == 0)
     {
@@ -102,27 +104,27 @@ void    init(t_filler **filler, char *line, int fd)
     (*filler)->init = 1;
 }
 
-void    output_coord(int i, int j)
+void			output_coord(int i, int j)
 {
-    ft_putnbr(i);
+    ft_putnbr_fd(i, 1);
     write(1, " ", 1);
-    ft_putnbr(j);
+    ft_putnbr_fd(j, 1);
     write(1, "\n", 1);
 }
 
-void    init_zero(int *a, int *b)
+void			init_zero(int *a, int *b)
 {
     *a = 0;
     *b = 0;
 }
 
-void    inc(int *a, int *b)
+void			inc(int *a, int *b)
 {
     (*a)++;
     (*b)++;
 }
 
-int     num_of_star(char **str)
+/*int     num_of_star(char **str)
 {
     int i;
     int j;
@@ -142,15 +144,15 @@ int     num_of_star(char **str)
         i++;
     }
     return num_of_star;
-}
+}*/
 
-int     check_valid_length(t_filler **filler, int i, int j, int width)
+int				check_valid_length(t_filler **filler, int i, int j, int width)
 {
-    int length;
-    int ok;
-    int i1;
-    int j1;
-    int j_copy;
+    int			length;
+    int			ok;
+    int			i1;
+    int			j1;
+    int			j_copy;
 
     init_zero(&i1, &ok);
     j_copy = j;
@@ -169,16 +171,16 @@ int     check_valid_length(t_filler **filler, int i, int j, int width)
         j = j_copy;
         inc(&i, &i1);
     }
-    if (ok != 0 && num_of_star((*filler)->piece) > ok)
+    if (ok == 1)
         return 1;
     return 0;
 }
 
-int     check_valid_width(t_filler **filler, int i)
+int				check_valid_width(t_filler **filler, int i)
 {
-    int width;
-    int j;
-    int length;
+    int			width;
+    int			j;
+    int			length;
 
     width = 0;
     j = 0;
@@ -197,18 +199,18 @@ int     check_valid_width(t_filler **filler, int i)
     return 1;
 }
 
-int     move(t_filler **filler)
+int				move(t_filler **filler)
 {
-    int i;
-    int width;
-    int valid;
+    int			i;
+    int			width;
+    int			valid;
 
     width = 0;
     if ((*filler)->up == (*filler)->id)
     {
         i = (*filler)->plateau_width - 1;
-        while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
-            i--;
+        //while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
+            //i--;
         while (i != -1 && (valid = check_valid_width(filler, i)) == 0)
             i--;
         return (valid == 0 ? 0 : 1);
@@ -218,8 +220,8 @@ int     move(t_filler **filler)
         i = 0;
         while ((*filler)->piece[width] != NULL)
             width++;
-        while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
-            i++;
+        //while (!ft_strchr((*filler)->plateau[i], (*filler)->id) && !ft_strchr((*filler)->plateau[i], (*filler)->id + 32))
+            //i++;
         width = (*filler)->plateau_width - width;
         while (i <= width && (valid = check_valid_width(filler, i)) == 0)
             i++;
@@ -227,9 +229,19 @@ int     move(t_filler **filler)
     }
 }
 
-int    read_plateau(t_filler **filler, int fd)
+int				select_move(t_filler **filler)
 {
-    char *line;
+	int			i;
+
+	i = move1(filler);
+	if (!i)
+		return move(filler);
+	return (i);
+}
+
+int				read_plateau(t_filler **filler, int fd)
+{
+    char		*line;
 
     while (get_next_line(fd, &line) > 0)
     {
@@ -245,22 +257,30 @@ int    read_plateau(t_filler **filler, int fd)
     return 0;
 }
 
-int     main(void)
+t_filler		*inicialize(void)
 {
-    t_filler *filler;
-    char *line;
-    int fd;
+    t_filler	*filler;
 
     filler = (t_filler *)malloc(sizeof(t_filler));
     filler->up = 0;
     filler->low = 0;
     filler->piece = NULL;
-    fd = open("file.txt", O_RDONLY);
-    //fd = 0;
     filler->init = 0;
+    return filler;
+}
+
+int				main(void)
+{
+    t_filler	*filler;
+    char		*line;
+    int			fd;
+
+    //fd = open("file.txt", O_RDONLY);
+    fd = 0;
     line = NULL;
     if (get_next_line(fd, &line) < 0 || !line || ft_strncmp(line, "$$$ exec p", 10) || (line[10] != '1' && line[10] != '2'))
         return 0;
+    filler = inicialize();
     filler->id = line[10] == '1' ? 'O' : 'X';
     filler->enemy_id = filler->id == 'X' ? 'O' : 'X';
     free(line);
