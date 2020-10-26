@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror
 LFLAGS = -L./libft -lft
 NAME = hluthor.filler
-SOURCES = filler.c get_next_line.c init.c hot_map.c free.c move1.c move2.c
+SOURCES = ./srcs/filler.c ./srcs/get_next_line.c ./srcs/init.c ./srcs/hot_map.c ./srcs/free.c ./srcs/move1.c ./srcs/move2.c
 OBJECTS = $(subst .c,.o,$(SOURCES))
 
 all: $(NAME)
